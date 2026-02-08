@@ -1,28 +1,30 @@
-# Session Handoff: cs/sena -> roa/verification
+# Handoff: feature/phase-1-config
 
-## Status
+## 완료된 작업 (Completed)
 
-- **Date**: 2026-02-08
-- **Current Branch**: verification/fix-check (derived from cs/hana d0c711912)
-- **Session Goal**: Verify Phase A Fix (Historical Context Leak) & Build
+- **T-001 (Build Verification)**:
+  - 검증 브랜치: `verification/fix-check` (local only, merged concepts to phase-1-config)
+  - 상태: Pass (Build OK, Tests OK)
+- **T-009 (Phase 1 Config)**:
+  - 브랜치: `feature/phase-1-config` (Pushed to **fork**)
+  - 내용:
+    - `src/tests/exec-config.test.ts` 추가 (기존 로직 검증용)
+    - `tools.exec` 스키마 및 `/exec` 커맨드 동작 확인 완료
+  - 상태: Completed
 
-## Completed Tasks (P0)
+## 미완료 (Pending)
 
-- [x] **T-007 (Hayun)**: Fixed Historical Context Leak.
-  - Commit: `d0c711912`
-  - Fix: Removed `announceEnabled` logic causing leak.
-- [x] **T-008 (Hayun)**: Rolled back model to `glm-4.7-flash`.
-- [x] **T-001 (Roa)**: Build & Test Verification.
-  - Build: ✅ SUCCESS (`pnpm build`)
-  - Test: ✅ SUCCESS (`src/agents/pi-embedded-utils.test.ts`)
+- [ ] PR 생성 (fork -> upstream)
+- [ ] 다음 단계: Phase 2 (Context Delivery) 시작 필요
 
-## Next Steps
+## 관련 파일
 
-1. **Merge Verification**: Merge `verification/fix-check` into `cs/hana` or `main`.
-2. **Phase 1 Config (T-009)**: Hayun to proceed with config updates.
-3. **Real-world Test**: Verify in actual Telegram environment (manual).
+- `src/config/zod-schema.agent-runtime.ts`: Config Schema
+- `src/agents/bash-tools.exec.ts`: Logic
+- `src/auto-reply/reply/exec/directive.ts`: Command Parsing
+- `src/tests/exec-config.test.ts`: Verification Test
 
-## Notes
+## 다음 세션 가이드
 
-- Unit tests for `pi-embedded-utils.ts` passed (35 tests).
-- Build artifacts generated successfully.
+- `fork` 리모트의 `feature/phase-1-config` 브랜치를 기반으로 PR을 생성하세요.
+- Phase 2 작업을 시작하세요.

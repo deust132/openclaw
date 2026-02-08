@@ -28,3 +28,11 @@
 
 - T-001: Completed
 - T-009: Ready to start
+
+---
+
+[수진] T-009 (Phase 1 Config) 완료
+
+- 검증 테스트 추가 (src/tests/exec-config.test.ts)
+- 기존 구현 (Schema, Logic, Command) 확인 완료
+- 브랜치 푸시 완료: fork/feature/phase-1-config
