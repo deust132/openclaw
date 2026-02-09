@@ -88,8 +88,10 @@ export function stripDowngradedToolCallText(text: string): string {
   // will end at the first `}`. This is acceptable because downgraded tool call text is
   // typically single-depth. For deeply nested cases, a balanced-brace parser would be needed.
   clean = clean
-    // Strip [Tool Call: ...] blocks (single-depth JSON only — see NOTE above)
+    // Strip [Tool Call: ...] blocks with Arguments (single-depth JSON only — see NOTE above)
     .replace(/\[Tool Call:[\s\S]*?Arguments:\s*\{[\s\S]*?\}\s*/gi, "")
+    // Strip inline [Tool Call: ...] markers without Arguments block (consume trailing space)
+    .replace(/\[Tool Call:[^\]]*\]\s?/gi, "")
     // Strip [Tool Result ...] blocks and their content
     .replace(/\[Tool Result for ID[^\]]*\]\n?[\s\S]*?(?=\n*\[Tool |\n*$)/gi, "")
     // Strip XML-style tool calls (Minimax/Anthropic legacy)
@@ -104,8 +106,9 @@ export function stripDowngradedToolCallText(text: string): string {
       return match.replace(/<\/?final>/g, "");
     });
 
-  // 3. Cleanup whitespace
-  return clean.trim();
+  // 3. Return cleaned text — no trim() here to preserve caller's whitespace context.
+  // Callers (e.g. extractAssistantText) apply their own trim when joining blocks.
+  return clean;
 }
 
 /**
