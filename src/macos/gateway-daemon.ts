@@ -93,6 +93,7 @@ async function main() {
     "loopback";
   const bind =
     bindRaw === "loopback" ||
+    bindRaw === "all" ||
     bindRaw === "lan" ||
     bindRaw === "auto" ||
     bindRaw === "custom" ||
@@ -100,7 +101,9 @@ async function main() {
       ? bindRaw
       : null;
   if (!bind) {
-    defaultRuntime.error('Invalid --bind (use "loopback", "lan", "tailnet", "auto", or "custom")');
+    defaultRuntime.error(
+      'Invalid --bind (use "loopback", "all", "lan", "tailnet", "auto", or "custom")',
+    );
     process.exit(1);
   }
 

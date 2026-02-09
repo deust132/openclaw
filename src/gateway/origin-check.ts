@@ -38,7 +38,7 @@ function parseOrigin(
   }
 }
 
-function isLoopbackHost(hostname: string): boolean {
+export function isLoopbackHost(hostname: string): boolean {
   if (!hostname) {
     return false;
   }
@@ -54,11 +54,37 @@ function isLoopbackHost(hostname: string): boolean {
   return false;
 }
 
+/**
+ * Check if the Host header value is allowed.
+ * Defends against DNS rebinding by rejecting unexpected hostnames.
+ * Loopback hostnames (localhost, 127.x, ::1) are always accepted.
+ */
+export function isHostAllowed(hostname: string, allowedHosts?: string[]): boolean {
+  const normalized = hostname.trim().toLowerCase();
+  if (!normalized) {
+    return true; // no host header → skip check (non-browser)
+  }
+  if (isLoopbackHost(normalized)) {
+    return true;
+  }
+  if (!allowedHosts || allowedHosts.length === 0) {
+    return true; // no allowlist configured → permissive
+  }
+  return allowedHosts.some((h) => h.trim().toLowerCase() === normalized);
+}
+
 export function checkBrowserOrigin(params: {
   requestHost?: string;
   origin?: string;
   allowedOrigins?: string[];
+  allowedHosts?: string[];
 }): OriginCheckResult {
+  // DNS rebinding defense: validate Host header first
+  const requestHostname = resolveHostName(params.requestHost);
+  if (requestHostname && !isHostAllowed(requestHostname, params.allowedHosts)) {
+    return { ok: false, reason: "host not allowed (possible DNS rebinding)" };
+  }
+
   const parsedOrigin = parseOrigin(params.origin);
   if (!parsedOrigin) {
     return { ok: false, reason: "origin missing or invalid" };
@@ -76,7 +102,6 @@ export function checkBrowserOrigin(params: {
     return { ok: true };
   }
 
-  const requestHostname = resolveHostName(requestHost);
   if (isLoopbackHost(parsedOrigin.hostname) && isLoopbackHost(requestHostname)) {
     return { ok: true };
   }
