@@ -83,6 +83,7 @@
 - Naming: match source names with `*.test.ts`; e2e in `*.e2e.test.ts`.
 - Run `pnpm test` (or `pnpm test:coverage`) before pushing when you touch logic.
 - Do not set test workers above 16; tried already.
+- Downstream tests: when refactoring a function, run `scripts/downstream-test.sh <changed-file>` to automatically find and run tests for all consumers of that module. Searches up to depth-2 import chains. Known limit: dynamic imports and 3+ depth re-exports are not detected.
 - Live tests (real keys): `CLAWDBOT_LIVE_TEST=1 pnpm test:live` (OpenClaw-only) or `LIVE=1 pnpm test:live` (includes provider live tests). Docker: `pnpm test:docker:live-models`, `pnpm test:docker:live-gateway`. Onboarding Docker E2E: `pnpm test:docker:onboard`.
 - Full kit + what’s covered: `docs/testing.md`.
 - Pure test additions/fixes generally do **not** need a changelog entry unless they alter user-facing behavior or the user asks for one.
@@ -187,3 +188,26 @@
 - Publish: `npm publish --access public --otp="<otp>"` (run from the package dir).
 - Verify without local npmrc side effects: `npm view <pkg> version --userconfig "$(mktemp)"`.
 - Kill the tmux session after publish.
+
+## Failed Approaches (반복 금지)
+
+이 섹션의 시도들은 이미 실패한 것이므로 다시 시도하지 마세요.
+새 항목 추가 시 형식:
+
+### [YYYY-MM-DD] 문제 제목
+
+- ❌ 시도 N: 무엇을 했는지 → 실패 (이유: 왜 실패했는지)
+- 🔍 아직 시도 안 한 것: 남은 접근법
+
+---
+
+### [2026-02-07] A2A announce targetChannel "unknown" 에러
+
+- ❌ 시도 1: openclaw.json에서 targetChannel 직접 매핑 → 실패 (이유: 런타임에서 무시됨)
+- ❌ 시도 2: gateway router에 하드코딩 → 실패 (이유: 다른 에이전트까지 영향)
+- ✅ 해결: sessions-announce-target.ts에 requesterChannel/To fallback 추가
+
+### [2026-02-08] deliveryContext webchat 고착
+
+- ❌ 시도 1: session key 파싱으로 채널 추출 → 실패 (이유: agent:name:main 형식에 채널 미인코딩)
+- ✅ 해결: Requester Priority 로직 + runAgentStep에 originChannel 전달
