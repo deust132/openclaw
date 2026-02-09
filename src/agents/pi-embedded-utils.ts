@@ -83,8 +83,12 @@ export function stripDowngradedToolCallText(text: string): string {
   let clean = stripHistoricalContext(text);
 
   // 2. Strip standard regex-based patterns
+  // NOTE: The regex for [Tool Call: ...] Arguments uses non-greedy match on `\{[\s\S]*?\}`.
+  // This does NOT handle deeply nested JSON (e.g. `{ "a": { "b": {} } }`) — the match
+  // will end at the first `}`. This is acceptable because downgraded tool call text is
+  // typically single-depth. For deeply nested cases, a balanced-brace parser would be needed.
   clean = clean
-    // Strip [Tool Call: ...] blocks
+    // Strip [Tool Call: ...] blocks (single-depth JSON only — see NOTE above)
     .replace(/\[Tool Call:[\s\S]*?Arguments:\s*\{[\s\S]*?\}\s*/gi, "")
     // Strip [Tool Result ...] blocks and their content
     .replace(/\[Tool Result for ID[^\]]*\]\n?[\s\S]*?(?=\n*\[Tool |\n*$)/gi, "")
