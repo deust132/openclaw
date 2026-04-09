@@ -2,6 +2,7 @@ import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { estimateTokens, generateSummary } from "@mariozechner/pi-coding-agent";
 import { DEFAULT_CONTEXT_TOKENS } from "./defaults.js";
+import { repairToolUseResultPairing } from "./session-transcript-repair.js";
 
 export const BASE_CHUNK_RATIO = 0.4;
 export const MIN_CHUNK_RATIO = 0.15;
@@ -316,6 +317,10 @@ export function pruneHistoryForContextShare(params: {
   droppedTokens: number;
   keptTokens: number;
   budgetTokens: number;
+  /** Count of dropped messages grouped by role. */
+  droppedByRole: Record<string, number>;
+  /** Number of dropped messages with importance >= 70. */
+  droppedImportantMessages: number;
 } {
   const maxHistoryShare = params.maxHistoryShare ?? 0.5;
   const budgetTokens = Math.max(1, Math.floor(params.maxContextTokens * maxHistoryShare));
@@ -333,11 +338,45 @@ export function pruneHistoryForContextShare(params: {
       break;
     }
     const [dropped, ...rest] = chunks;
+    const flatRest = rest.flat();
+
+    // After dropping a chunk, repair tool_use/tool_result pairing to handle
+    // orphaned tool_results (whose tool_use was in the dropped chunk).
+    // repairToolUseResultPairing drops orphaned tool_results, preventing
+    // "unexpected tool_use_id" errors from Anthropic's API.
+    const repairReport = repairToolUseResultPairing(flatRest);
+    const repairedKept = repairReport.messages;
+
+    // Track orphaned tool_results as dropped (they were in kept but their tool_use was dropped)
+    const orphanedCount = repairReport.droppedOrphanCount;
+
     droppedChunks += 1;
-    droppedMessages += dropped.length;
+    droppedMessages += dropped.length + orphanedCount;
     droppedTokens += estimateMessagesTokens(dropped);
+    // Note: We don't have the actual orphaned messages to add to droppedMessagesList
+    // since repairToolUseResultPairing doesn't return them. This is acceptable since
+    // the dropped messages are used for summarization, and orphaned tool_results
+    // without their tool_use context aren't useful for summarization anyway.
     allDroppedMessages.push(...dropped);
-    keptMessages = rest.flat();
+    keptMessages = repairedKept;
+  }
+
+  // Compute role-based drop stats and importance count
+  const droppedByRole: Record<string, number> = {};
+  let droppedImportantMessages = 0;
+  const IMPORTANT_THRESHOLD = 70;
+
+  for (const msg of allDroppedMessages) {
+    const role = (msg as { role?: string }).role ?? "unknown";
+    droppedByRole[role] = (droppedByRole[role] ?? 0) + 1;
+
+    // Approximate importance: system=100, user=80, assistant=60, tool=40
+    const baseScores: Record<string, number> = { system: 100, user: 80, assistant: 60, tool: 40 };
+    const base = baseScores[role] ?? 40;
+    // Recency not computable here (dropped from front), so use base only
+    if (base >= IMPORTANT_THRESHOLD) {
+      droppedImportantMessages += 1;
+    }
   }
 
   return {
@@ -348,6 +387,8 @@ export function pruneHistoryForContextShare(params: {
     droppedTokens,
     keptTokens: estimateMessagesTokens(keptMessages),
     budgetTokens,
+    droppedByRole,
+    droppedImportantMessages,
   };
 }
 

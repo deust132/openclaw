@@ -1,4 +1,4 @@
-export type GatewayBindMode = "auto" | "lan" | "loopback" | "custom" | "tailnet";
+export type GatewayBindMode = "auto" | "all" | "lan" | "loopback" | "custom" | "tailnet";
 
 export type GatewayTlsConfig = {
   /** Enable TLS for the gateway server. */
@@ -66,6 +66,12 @@ export type GatewayControlUiConfig = {
   enabled?: boolean;
   /** Optional base path prefix for the Control UI (e.g. "/openclaw"). */
   basePath?: string;
+  /** Optional filesystem root for Control UI assets (defaults to dist/control-ui). */
+  root?: string;
+  /** Allowed browser origins for Control UI/WebChat websocket connections. */
+  allowedOrigins?: string[];
+  /** Allowed Host header values for DNS rebinding protection (e.g. ["myhost.example.com"]). */
+  allowedHosts?: string[];
   /** Allow token-only auth over insecure HTTP (default: false). */
   allowInsecureAuth?: boolean;
   /** DANGEROUS: Disable device identity checks for the Control UI (default: false). */
@@ -218,6 +224,7 @@ export type GatewayConfig = {
   /**
    * Bind address policy for the Gateway WebSocket + Control UI HTTP server.
    * - auto: Loopback (127.0.0.1) if available, else 0.0.0.0 (fallback to all interfaces)
+   * - all: 0.0.0.0 (all interfaces, alias for lan — clearer intent for public/reverse-proxy setups)
    * - lan: 0.0.0.0 (all interfaces, no fallback)
    * - loopback: 127.0.0.1 (local-only)
    * - tailnet: Tailnet IPv4 if available (100.64.0.0/10), else loopback

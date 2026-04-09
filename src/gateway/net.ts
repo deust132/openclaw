@@ -1,5 +1,29 @@
 import net from "node:net";
+import os from "node:os";
 import { pickPrimaryTailnetIPv4, pickPrimaryTailnetIPv6 } from "../infra/tailnet.js";
+
+/**
+ * Pick the primary non-internal IPv4 address (LAN IP).
+ * Prefers common interface names (en0, eth0) then falls back to any external IPv4.
+ */
+export function pickPrimaryLanIPv4(): string | undefined {
+  const nets = os.networkInterfaces();
+  const preferredNames = ["en0", "eth0"];
+  for (const name of preferredNames) {
+    const list = nets[name];
+    const entry = list?.find((n) => n.family === "IPv4" && !n.internal);
+    if (entry?.address) {
+      return entry.address;
+    }
+  }
+  for (const list of Object.values(nets)) {
+    const entry = list?.find((n) => n.family === "IPv4" && !n.internal);
+    if (entry?.address) {
+      return entry.address;
+    }
+  }
+  return undefined;
+}
 
 export function isLoopbackAddress(ip: string | undefined): boolean {
   if (!ip) {
@@ -119,6 +143,7 @@ export function isLocalGatewayAddress(ip: string | undefined): boolean {
  *
  * Modes:
  * - loopback: 127.0.0.1 (rarely fails, but handled gracefully)
+ * - all: 0.0.0.0 (alias for lan — clearer intent for public setups)
  * - lan: always 0.0.0.0 (no fallback)
  * - tailnet: Tailnet IPv4 if available, else loopback
  * - auto: Loopback if available, else 0.0.0.0
@@ -151,7 +176,7 @@ export async function resolveGatewayBindHost(
     return "0.0.0.0";
   }
 
-  if (mode === "lan") {
+  if (mode === "lan" || mode === "all") {
     return "0.0.0.0";
   }
 
