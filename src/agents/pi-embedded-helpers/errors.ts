@@ -50,16 +50,19 @@ export function isCompactionFailureError(errorMessage?: string): boolean {
   if (!errorMessage) {
     return false;
   }
-  if (!isContextOverflowError(errorMessage)) {
-    return false;
-  }
   const lower = errorMessage.toLowerCase();
-  return (
+  const hasCompactionTerm =
     lower.includes("summarization failed") ||
     lower.includes("auto-compaction") ||
     lower.includes("compaction failed") ||
-    lower.includes("compaction")
-  );
+    lower.includes("compaction");
+  if (!hasCompactionTerm) {
+    return false;
+  }
+  if (isLikelyContextOverflowError(errorMessage)) {
+    return true;
+  }
+  return lower.includes("context overflow");
 }
 
 const ERROR_PAYLOAD_PREFIX_RE =
